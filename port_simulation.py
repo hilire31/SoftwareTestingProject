@@ -4,17 +4,17 @@ import time
 import random
 
 class Port:
-    def __init__(self, n_berths=2):
-        self.berths = threading.Semaphore(n_berths)  # available berths
+    def __init__(self, n_docks=2):
+        self.docks = threading.Semaphore(n_docks)  # available docks
         self.crane = threading.Lock()                # exclusive crane
-        self.n_berths = n_berths
+        self.n_docks = n_docks
 
     def arrive_and_service(self, ship_id):
         print(f"Ship {ship_id} arriving...")
-        # request a berth
-        self.berths.acquire()
+        # request a dock
+        self.docks.acquire()
         try:
-            print(f"Ship {ship_id} docked (berth acquired).")
+            print(f"Ship {ship_id} docked (dock acquired).")
             # simulate unloading/loading that requires crane
             with self.crane:
                 print(f"Ship {ship_id} using crane...")
@@ -24,9 +24,9 @@ class Port:
             # simulate some post-crane operations
             time.sleep(random.uniform(0.05, 0.2))
         finally:
-            # leave berth
-            self.berths.release()
-            print(f"Ship {ship_id} departed (berth released).")
+            # leave dock
+            self.docks.release()
+            print(f"Ship {ship_id} departed (dock released).")
 
 def ship_thread(port, ship_id):
     # ships might attempt service multiple times in a longer sim; keep it simple: one visit
@@ -34,7 +34,7 @@ def ship_thread(port, ship_id):
 
 def main():
     random.seed(42)
-    port = Port(n_berths=2)
+    port = Port(n_docks=2)
     ships = []
     n_ships = 5
 
