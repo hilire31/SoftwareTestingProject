@@ -1,0 +1,42 @@
+@startuml
+actor Ship1
+actor Ship2
+participant Port
+participant Dock
+participant Crane
+
+par
+  Ship1 -> Port : requestdock()
+  Port -> Dock : acquire()
+  Dock --> Port : dockGranted
+  Port --> Ship1 : dockOK
+  
+  Ship1 -> Port : requestCrane()
+  Port -> Crane : acquire()
+  Crane --> Port : craneGranted
+  Port --> Ship1 : craneOK
+  
+  Ship1 -> Crane : useCrane()
+  Ship1 -> Port : releaseCrane()
+  Port -> Crane : release()
+  Port -> Dock : release()
+  Ship1 --> Port : depart()
+
+else
+  Ship2 -> Port : requestdock()
+  Port -> Dock : acquire()
+  Dock --> Port : dockGranted
+  Port --> Ship2 : dockOK
+  
+  Ship2 -> Port : requestCrane()
+  Port -> Crane : acquire()  # waits if Ship1 holds it
+  Crane --> Port : craneGranted
+  Port --> Ship2 : craneOK
+  
+  Ship2 -> Crane : useCrane()
+  Ship2 -> Port : releaseCrane()
+  Port -> Crane : release()
+  Port -> Dock : release()
+  Ship2 --> Port : depart()
+end
+@enduml
