@@ -1,0 +1,40 @@
+@startuml
+actor Ship1
+actor Ship2
+participant Port
+participant Crane
+
+== Both Ships Request Crane at the Same Time ==
+
+par
+  Ship1 -> Port : requestCrane()
+  Ship2 -> Port : requestCrane()
+end
+
+== Port Handles Requests ==
+
+alt CraneAvailable
+  Port -> Crane : allocate()
+  Crane --> Port : craneGranted
+  Port --> Ship1 : craneOK
+  note right of Ship1: Ship1 granted crane access
+  Port --> Ship2 : wait
+else CraneBusy
+  Port --> Ship1 : wait
+  Port --> Ship2 : wait
+end
+
+== Ship1 Uses and Releases Crane ==
+Ship1 -> Crane : useCrane()
+Ship1 -> Port : releaseCrane()
+Port -> Crane : release()
+Port --> Ship2 : craneOK
+note right of Ship2: Ship2 gets the crane after Ship1 releases it
+
+== Ship2 Uses and Releases Crane ==
+Ship2 -> Crane : useCrane()
+Ship2 -> Port : releaseCrane()
+Port -> Crane : release()
+Ship2 --> Port : done
+
+@enduml
