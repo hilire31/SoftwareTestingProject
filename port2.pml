@@ -1,3 +1,7 @@
+/* nombre de docks / grues disponibles */
+#define NDOCK 2
+#define NCRANE 2
+
 bool dockFree[2];
 bool craneFree[2];
 
@@ -114,11 +118,11 @@ init {
     :: true ->
         /* Vérifications de sûreté */
 
-        /* Exclusion mutuelle sur le dock */
-        assert(!(ship1_docked && ship2_docked));
+    /* Capacité des ressources : ne pas dépasser le nombre disponible */
+    assert((ship1_docked + ship2_docked) <= NDOCK);
 
-        /* Exclusion mutuelle sur la grue */
-        assert(!(ship1_usingCrane && ship2_usingCrane));
+    /* Capacité des grues */
+    assert((ship1_usingCrane + ship2_usingCrane) <= NCRANE);
 
         /* Cohérence d’état : on ne peut pas utiliser la grue sans être docké */
         assert(!ship1_usingCrane || ship1_docked);
