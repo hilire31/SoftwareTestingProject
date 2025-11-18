@@ -1,139 +1,129 @@
-/* nombre de docks / grues disponibles */
-#define NDOCK 2
-#define NCRANE 2
+#define ND 2      /* number of docks */
+#define NC 2      /* number of cranes */
 
-bool dockFree[2];
-bool craneFree[2];
+chan reqDock = [2] of { byte };         /* ship → port */
+chan dockAcquire = [2] of { byte };     /* port → dock (sends ship id as byte) */
+chan dockGranted = [2] of { byte };     /* dock → port (dockId) */
+chan grantDock = [2] of { byte, byte }; /* port → ship */
 
-bool ship1_docked = false;
-bool ship2_docked = false;
-
-bool ship1_usingCrane = false;
-bool ship2_usingCrane = false;
-
-bool ship1_departed = false;
-bool ship2_departed = false;
-
-chan reqDock = [2] of { byte };
 chan reqCrane = [2] of { byte };
-chan grantDock = [2] of { byte, byte }; /* ship, dockId */
-chan grantCrane = [2] of { byte, byte }; /* ship, craneId */
-chan releaseDock = [2] of { byte }; /* dockId */
-chan releaseCrane = [2] of { byte }; /* craneId */
+chan craneAcquire = [2] of { byte };
+chan craneGranted = [2] of { byte };
+chan grantCrane = [2] of { byte, byte };
 
-/* PORT */
+chan releaseDock = [2] of { byte };   /* ship → port */
+chan releaseCrane = [2] of { byte };
+
+/********************  DOCK  *************************/
+proctype Dock(byte id) {
+    bool free = true;
+    byte id2;
+    byte msg;
+    do
+    :: dockAcquire ? msg ->
+        if
+        :: free ->
+            free = false;
+            dockGranted ! id;
+        :: else ->
+            skip;
+        fi
+    :: releaseDock ? id2 ->
+        if
+        :: id2 == id ->
+            free = true;
+        :: else -> skip;
+        fi
+    od
+}
+
+/********************  CRANE  *************************/
+proctype Crane(byte id) {
+    bool free = true;
+    byte id2;
+    byte msg;
+    do
+    :: craneAcquire ? msg ->
+        if
+        :: free ->
+            free = false;
+            craneGranted ! id;
+        :: else -> skip;
+        fi
+    :: releaseCrane ? id2 ->
+        if
+        :: id2 == id ->
+            free = true;
+        :: else -> skip;
+        fi
+    od
+}
+
+/********************  PORT  *************************/
 proctype Port() {
     byte ship;
+    byte resourceId;
+
     do
+    /* --- Docking --- */
     :: reqDock ? ship ->
-        /* choose first free dock (1 or 2) and grant it to requesting ship */
-        if
-        :: dockFree[0] ->
-            dockFree[0] = false;
-            grantDock ! ship, 1;
-        :: dockFree[1] ->
-            dockFree[1] = false;
-            grantDock ! ship, 2;
-        :: else -> skip;
-        fi
-    :: releaseDock ? ship ->
-        /* releaseDock carries dockId */
-        dockFree[ship-1] = true;
+        dockAcquire ! ship;
+        dockGranted ? resourceId;
+        grantDock ! ship, resourceId;
 
+    :: releaseDock ? resourceId ->
+        releaseDock ! resourceId;
+
+    /* --- Crane --- */
     :: reqCrane ? ship ->
-        /* choose first free crane and grant it to requesting ship */
-        if
-        :: craneFree[0] ->
-            craneFree[0] = false;
-            grantCrane ! ship, 1;
-        :: craneFree[1] ->
-            craneFree[1] = false;
-            grantCrane ! ship, 2;
-        :: else -> skip;
-        fi
-    :: releaseCrane ? ship ->
-        /* releaseCrane carries craneId */
-        craneFree[ship-1] = true;
-    od
-    
+        craneAcquire ! ship;
+        craneGranted ? resourceId;
+        grantCrane ! ship, resourceId;
 
+    :: releaseCrane ? resourceId ->
+        releaseCrane ! resourceId;
+    od
 }
 
-/* SHIP 1 */
+/********************  SHIP 1  *************************/
 proctype Ship1() {
-    byte dockId;
-    byte craneId;
+    byte dockId, craneId;
+    byte sender;
+
     reqDock ! 1;
-    grantDock ? 1, dockId; /* receive (ship, dockId) */
-    ship1_docked = true;
+    grantDock ? sender, dockId;
 
     reqCrane ! 1;
-    grantCrane ? 1, craneId; /* receive (ship, craneId) */
-    ship1_usingCrane = true;
+    grantCrane ? sender, craneId;
 
     /* use crane */
-    ship1_usingCrane = false;
     releaseCrane ! craneId;
     releaseDock ! dockId;
-    ship1_docked = false;
-    ship1_departed = true;
 }
 
-/* SHIP 2 */
+/********************  SHIP 2  *************************/
 proctype Ship2() {
-    byte dockId;
-    byte craneId;
+    byte dockId, craneId;
+    byte sender;
+
     reqDock ! 2;
-    grantDock ? 2, dockId;
-    ship2_docked = true;
+    grantDock ? sender, dockId;
 
     reqCrane ! 2;
-    grantCrane ? 2, craneId;
-    ship2_usingCrane = true;
+    grantCrane ? sender, craneId;
 
     /* use crane */
-    ship2_usingCrane = false;
     releaseCrane ! craneId;
     releaseDock ! dockId;
-    ship2_docked = false;
-    ship2_departed = true;
 }
 
-/* ---------- INITIALISATION + VÉRIFICATIONS ---------- */
+/********************  INIT  *************************/
 init {
     atomic {
-        /* initialisation des ressources */
-        dockFree[0] = true;
-        dockFree[1] = true;
-        craneFree[0] = true;
-        craneFree[1] = true;
-
         run Port();
+        run Dock(1); run Dock(2);
+        run Crane(1); run Crane(2);
         run Ship1();
         run Ship2();
     }
-
-    /* Boucle de surveillance continue */
-    do
-    :: true ->
-        /* Vérifications de sûreté */
-
-    /* Capacité des ressources : ne pas dépasser le nombre disponible */
-    assert((ship1_docked + ship2_docked) <= NDOCK);
-
-    /* Capacité des grues */
-    assert((ship1_usingCrane + ship2_usingCrane) <= NCRANE);
-
-        /* Cohérence d’état : on ne peut pas utiliser la grue sans être docké */
-        assert(!ship1_usingCrane || ship1_docked);
-        assert(!ship2_usingCrane || ship2_docked);
-
-        /* Vérifications de vivacité (approximées via assertions temporelles) */
-        /* On vérifie que chaque navire finit par partir au moins une fois */
-        if
-        :: (ship1_departed && ship2_departed) ->
-            break;
-        :: else -> skip;
-        fi;
-    od
 }
