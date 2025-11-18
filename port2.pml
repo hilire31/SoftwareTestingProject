@@ -132,7 +132,6 @@ init {
         /* On vérifie que chaque navire finit par partir au moins une fois */
         if
         :: (ship1_departed && ship2_departed) ->
-            printf("Les deux navires ont terminé sans interblocage.\n");
             break;
         :: else -> skip;
         fi;
