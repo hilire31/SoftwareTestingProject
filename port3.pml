@@ -20,7 +20,7 @@ chan releaseCrane  = [2] of { mtype, byte };
 
 
 
-proctype Dock(byte id)
+proctype Dock(byte dockid)
 {
     byte ship;
 
@@ -41,7 +41,7 @@ Start:
 /* ----------------------------------------------------------- */
 
 HandleAcquire:
-    dockGranted!GRANT_DOCK, id;
+    dockGranted!GRANT_DOCK, dockid;
     goto Start;
 
 HandleRelease:
@@ -50,7 +50,7 @@ HandleRelease:
 }
 
 
-proctype Crane(byte id)
+proctype Crane(byte craneid)
 {
     byte ship;
 
@@ -71,7 +71,7 @@ Start:
 /* ----------------------------------------------------------- */
 
 HandleAcquire:
-    craneGranted!GRANT_CRANE, id;
+    craneGranted!GRANT_CRANE, craneid;
     goto Start;
 
 HandleRelease:
@@ -140,23 +140,23 @@ HandleReleaseCrane:
 }
 
 
-proctype Ship(byte id) {
+proctype Ship(byte shipid) {
     byte dockId, craneId;
 
     Start: atomic {
-        reqDock ! REQ_DOCK, 1;
+        reqDock ! REQ_DOCK, shipid;
         goto Next1
     }
     Next1: atomic {
-        grantDock ? GRANT_DOCK, 1, dockId;
+        grantDock ? GRANT_DOCK, shipid, dockId;
         goto Next2
     }
     Next2: atomic {
-        reqCrane ! REQ_CRANE, 1;
+        reqCrane ! REQ_CRANE, shipid;
         goto Next3
     }
     Next3: atomic {
-        grantCrane ? GRANT_CRANE, 1, craneId;
+        grantCrane ? GRANT_CRANE, shipid, craneId;
         goto Next4
     }
     Next4: atomic {
@@ -171,8 +171,8 @@ proctype Ship(byte id) {
 
 init {
     run Port();
-    run Dock(1); run Dock(2);
-    run Crane(1); run Crane(2);
+    run Dock(1); 
+    run Crane(1); 
     run Ship(1);
     run Ship(2);
 }
