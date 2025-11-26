@@ -6,7 +6,7 @@ chan ShipPort = [iSize] of { mtype }
 chan PortDock = [iSize] of { mtype }
 chan PortCrane = [iSize] of { mtype }
 
-proctype Ship() {
+proctype Ship(byte id) {
     Start: atomic {
         ShipPort!requestDock 
         goto Next1
@@ -90,7 +90,7 @@ proctype PortController() {
     }
 }
 
-proctype Dock() {
+proctype Dock(byte id) {
     Start: atomic {
         PortDock?checkDock 
         goto Next1
@@ -108,7 +108,7 @@ proctype Dock() {
     }
 }
 
-proctype Crane() {
+proctype Crane(byte id) {
     Start: atomic {
         PortCrane?checkCrane 
         goto Next1
@@ -119,8 +119,8 @@ proctype Crane() {
 }
 
 init {
-    run Ship();
+    run Ship(0);
     run PortController();
-    run Dock();
-    run Crane();
+    run Dock(0);
+    run Crane(0);
 }
