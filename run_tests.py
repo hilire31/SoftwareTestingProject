@@ -1,24 +1,19 @@
-"""
-run_tests.py — petit utilitaire pour exécuter pytest depuis le projet
-Usage: python run_tests.py
-Retourne le code de sortie de pytest.
-"""
-import sys
+
 
 
 def run():
     try:
         import pytest
     except ImportError:
-        print("pytest n'est pas installé dans cet environnement. Installez-le (pip install pytest) et réessayez.")
+        print("pytest isn't installed.")
         return 1
 
     # Lancer pytest en mode verbeux court
     exit_code = pytest.main(["-q"])
     if exit_code == 0:
-        print("\n✅ Tous les tests ont réussi.")
+        print("\n [run_tests.py] all test passed")
     else:
-        print(f"\n❌ Tests échoués (code {exit_code}).")
+        print(f"\n [run_tests.py] at least one test failed (code {exit_code}).")
     return exit_code
 
 
