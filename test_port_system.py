@@ -87,7 +87,7 @@ def test_no_available_dock():
     with pytest.raises(ResourceError):
         port.assign_dock(ship2)
 
-# ADDED THESE TWO - YAVUZ
+# ADDED THESE FOUR - YAVUZ
 def test_resource_reuse_scenario():
 
 #    IMPROVEMENT 1: Verifies that a Dock can be reused by a second ship
@@ -136,6 +136,66 @@ def test_scalability_processing():
         assert dock.occupied_by is None
         assert crane.occupied_by is None
 
+def test_boundary_crane_contention():
+    """
+    IMPROVEMENT 3: Boundary Condition (Section 11).
+    Tests the specific boundary where Docks are available, but Cranes are FULL.
+    Ship should Dock successfully, but fail to start unloading.
+    """
+    dock1 = Dock(1)
+    dock2 = Dock(2)
+    crane1 = Crane(1) # Only 1 Crane
+    
+    port = PortCoordinator([dock1, dock2], [crane1])
+    
+    ship1 = Ship("S1")
+    ship2 = Ship("S2")
+    
+    # Ship 1 takes the only crane
+    port.assign_dock(ship1)
+    port.assign_crane(ship1)
+    
+    # Ship 2 takes the second dock (Successful)
+    port.assign_dock(ship2)
+    assert ship2.state == ShipState.DOCKED
+    
+    # Ship 2 tries to take a crane (Should Fail - Boundary Hit)
+    with pytest.raises(ResourceError):
+        port.assign_crane(ship2)
+
+
+def test_regression_mixed_fleet():
+    """
+    IMPROVEMENT 4: Regression Testing (Section 11).
+    Simulates a complex mixed fleet where some ships succeed and others fail
+    due to dynamic resource limits. Ensures system stability under mixed load.
+    """
+    docks = [Dock(1), Dock(2)]
+    cranes = [Crane(1)] # Bottleneck resource
+    port = PortCoordinator(docks, cranes)
+    
+    # Ship A: Success
+    shipA = Ship("A")
+    port.assign_dock(shipA)
+    port.assign_crane(shipA)
+    
+    # Ship B: Can Dock, but NO Crane
+    shipB = Ship("B")
+    port.assign_dock(shipB)
+    with pytest.raises(ResourceError):
+        port.assign_crane(shipB)
+        
+    # Ship C: NO Dock (Port Full)
+    shipC = Ship("C")
+    with pytest.raises(ResourceError):
+        port.assign_dock(shipC)
+        
+    # Verify States to ensure no corruption
+    assert shipA.state == ShipState.UNLOADING
+    assert shipB.state == ShipState.DOCKED
+    assert shipC.state == ShipState.WAITING
+
+
 # ADDED THESE TWO - YAVUZ
 
 def test_logging_created_and_events(tmp_path):
@@ -172,3 +232,22 @@ if __name__ == "__main__":
 
 
 
+
+
+'''
+Dock acquisition and release (Section 3): Satisfied by test_dock_acquisition_and_release.
+
+Crane acquisition and release (Section 3): Satisfied by test_crane_acquisition_and_release.
+
+Correct ordering of Ship operations (Section 3 & 8): Satisfied by test_correct_ship_operation_order and test_invalid_ship_operation_order.
+
+Correct routing decisions (Section 3): Satisfied by test_port_coordinator_full_scenario.
+
+Resource Contention/Boundary (Section 11): Satisfied by test_no_available_dock.
+
+Scalability testing (Section 11): Satisfied by test_scalability_processing.
+
+Resource Update/Reuse (Section 2 & Gap Analysis): Satisfied by test_resource_reuse_scenario.
+
+Message flow correctness (Section 2 & 8): Satisfied by test_port_coordinator_full_scenario (log verification).
+'''
