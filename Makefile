@@ -1,6 +1,6 @@
 # Makefile for SPIN model checking
 
-MODEL = port3.pml
+MODEL = port2.pml
 EXEC = pan
 
 # Default target
